@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 import os
-from flask import Flask, request, jsonify, url_for
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from datastructures import FamilyStructure
@@ -29,14 +29,58 @@ def sitemap():
     return generate_sitemap(app)
 
 
-@app.route('/members', methods=['GET'])
-def handle_hello():
-    # This is how you can use the Family datastructure by calling its methods
-    members = jackson_family.get_all_members()
-    response_body = {"hello": "world",
-                     "family": members}
-    return jsonify(response_body), 200
+# @app.route('/members', methods=['GET'])
+# def handle_hello():
+#     # This is how you can use the Family datastructure by calling its methods
+#     members = jackson_family.get_all_members()
+#     response_body = {"hello": "world",
+#                      "family": members}
+#     return jsonify(response_body), 200
 
+
+@app.route("/members", methods=["GET"])
+def get_all_member():
+    try:
+        members = jackson_family.get_all_members()
+        return jsonify(members), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/members/<int:member_id>", methods=["GET"])
+def get_member(member_id):
+    try:
+        member = jackson_family.get_member(member_id)
+        if member:
+            return jsonify(member), 200
+        else:
+            return jsonify({"error": "miembro no encontrado"}, 404)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/members", methods=["POST"])
+def add_member():
+    try:
+        member = request.get_json()
+        if not member or "first_name" not in member or "age" not in member or "lucky_numbers" not in member:
+            return jsonify({"error": "Datos invalidos"}), 400
+        jackson_family.add_member(member)
+        return jsonify({"message": "miembro agregado exitosamente"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/members/<int:member_id>", methods=["DELETE"])
+def delete_member(member_id):
+    try:
+        member = jackson_family.get_member(member_id)
+        if not member:
+            return jsonify({"error": "Miembro no encontrado"}), 404
+        jackson_family.delete_member(member_id)
+        return jsonify({"done": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # This only runs if `$ python src/app.py` is executed
